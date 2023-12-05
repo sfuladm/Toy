@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Portfolio</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+</head>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    canvas {
+        display: block;
+    }
+</style>
+<body>
+
+<script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.131.2/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.131.2/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://cdn.skypack.dev/three@0.131.2/examples/jsm/controls/OrbitControls.js';
+
+    let camera, scene, renderer, controls, mixer;
+
+    init();
+    animate();
+
+    function init() {
+        // Load background texture
+        const textureLoader = new THREE.TextureLoader();
+        const backgroundTexture = textureLoader.load('Amatic SC.png'); // Replace with the path to your image
+
+        // Create scene
+        scene = new THREE.Scene();
+        scene.background = backgroundTexture;
+
+        // Create ambient light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Create directional light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        directionalLight.position.set(3, 10, 4);
+        scene.add(directionalLight);
+
+        // Load the GLTF model
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load(
+            'sitting.glb',
+            function (gltf) {
+                // Center the object
+                const object = gltf.scene;
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                object.position.sub(center);
+
+                // Find the material you want to make transparent by its name
+                const materialNameToMakeTransparent = 'Glass Simple'; // Replace with the actual name of the material
+
+                object.traverse((node) => {
+                    if (node.isMesh && node.material.name === materialNameToMakeTransparent) {
+                        // Enable transparency for the specific material
+                        node.material.transparent = true;
+                        // Set the desired opacity value (0.0 for fully transparent, 1.0 for fully opaque)
+                        node.material.opacity = 0.25; // You can adjust the opacity as needed
+                    }
+                });
+
+                // Add click event listener to the document
+                document.addEventListener('click', onClick, false);
+
+                scene.add(object);
+
+                // Get the animations from the GLTF file
+                mixer = new THREE.AnimationMixer(object);
+                gltf.animations.forEach((clip) => {
+                    const action = mixer.clipAction(clip);
+                    action.play();
+                });
+            },
+            undefined, // onProgress callback
+            function (error) {
+                console.error('Error loading GLTF model:', error);
+            }
+        );
+
+        // Create perspective camera
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 18);
+
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Create OrbitControls
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.5;
+        controls.zoomSpeed = 1.2;
+
+        // Resize handling
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        camera.aspect = aspectRatio;
+
+        const initialFOV = 70;
+        const verticalFOV = initialFOV / aspectRatio;
+
+        camera.fov = verticalFOV;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+
+        if (mixer) {
+            mixer.update(0.016);
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    function onClick(event) {
+        // Calculate mouse position in normalized device coordinates
+        const mouse = new THREE.Vector2();
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Raycasting
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+
+        // Check for intersections
+        const intersects = raycaster.intersectObjects(scene.children, true);
+
+        if (intersects.length > 0) {
+            // Open another HTML file on click
+            window.location.href = 'Wireframe.html';
+        }
+    }
+</script>
+
+</body>
+</html>
