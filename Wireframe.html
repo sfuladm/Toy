@@ -52,7 +52,7 @@
         // Load the GLTF model
         const gltfLoader = new GLTFLoader();
         gltfLoader.load(
-            'sitting.glb',
+            'DrawingSiting.glb',
             function (gltf) {
                 // Center the object
                 const object = gltf.scene;
@@ -68,6 +68,14 @@
                 gltf.animations.forEach((clip) => {
                     const action = mixer.clipAction(clip);
                     action.play();
+                });
+
+                // Traverse the object and set transparent materials
+                object.traverse((node) => {
+                    if (node.isMesh) {
+                        node.material.transparent = true;
+                        node.material.opacity = 0.5; // Adjust opacity as needed
+                    }
                 });
 
                 // Create outline effect
@@ -89,8 +97,8 @@
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 5, 10);
 
-        // Create renderer with outline effect
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Create renderer with alpha (for transparency)
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
