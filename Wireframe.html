@@ -65,7 +65,7 @@
                 const object = gltf.scene;
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
-                center.y += 0.8;
+                center.y += 0.6;
                 object.position.sub(center);
 
                 // Add the object to the scene
