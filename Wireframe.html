@@ -34,7 +34,7 @@
     function init() {
         // Load background texture
         const textureLoader = new THREE.TextureLoader();
-        const backgroundTexture = textureLoader.load('Amatic SC.png'); // Replace with the path to your image
+        const backgroundTexture = textureLoader.load('Amatic SC.png');
 
         // Create scene
         scene = new THREE.Scene();
@@ -70,48 +70,34 @@
                     action.play();
                 });
 
-                // Traverse the object and set transparent materials
-                object.traverse((node) => {
-                    if (node.isMesh) {
-                        node.material.transparent = true;
-                        node.material.opacity = 0.5; // Adjust opacity as needed
-                    }
-                });
+                // Create perspective camera
+                camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+                camera.position.set(0, 5, 10);
 
-                // Create outline effect
+                // Create renderer
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
+
+                // Create OrbitControls
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.rotateSpeed = 0.5;
+                controls.zoomSpeed = 1.2;
+
+                // Create OutlineEffect
                 outlineEffect = new OutlineEffect(renderer);
 
-                // Enable outline effect for the object
-                outlineEffect.selection.set(object);
-
-                // Add click event listener to the document
-                document.addEventListener('click', onClick, false);
+                // Resize handling
+                window.addEventListener('resize', onWindowResize);
             },
             undefined, // onProgress callback
             function (error) {
                 console.error('Error loading GLTF model:', error);
             }
         );
-
-        // Create perspective camera
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 5, 10);
-
-        // Create renderer with alpha (for transparency)
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // Create OrbitControls
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.rotateSpeed = 0.5;
-        controls.zoomSpeed = 1.2;
-
-        // Resize handling
-        window.addEventListener('resize', onWindowResize);
     }
 
     function onWindowResize() {
@@ -130,33 +116,15 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        controls.update();
 
+        // Update controls and mixer
+        controls.update();
         if (mixer) {
             mixer.update(0.016);
         }
 
-        // Render with the outline effect
+        // Render the scene with the OutlineEffect
         outlineEffect.render(scene, camera);
-    }
-
-    function onClick(event) {
-        // Calculate mouse position in normalized device coordinates
-        const mouse = new THREE.Vector2();
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        // Raycasting
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
-
-        // Check for intersections
-        const intersects = raycaster.intersectObjects(scene.children, true);
-
-        if (intersects.length > 0) {
-            // Open another HTML file on click
-            window.location.href = 'index.html'; // Replace with the desired HTML file
-        }
     }
 </script>
 
