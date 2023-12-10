@@ -5,50 +5,65 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <link href="https://fonts.cdnfonts.com/css/qui-finn" rel="stylesheet">
-                
-</head>
-<style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        position: relative; /* Make the body a positioning context */
-    }
 
-    canvas {
-        display: block;
-    }
-
-    #info {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        color: #ffffff;
-        font-family: Arial, sans-serif;
-        font-size: 16px;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 10px;
-        border-radius: 5px;
-        pointer-events: none;
-        font-family: 'Qui Finn', sans-serif;
-        letter-spacing: 2px;
-
-        @media (max-width: 544px) {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            text-align: center;
-            margin: auto;
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
         }
-    }
-    
-</style>
+
+        canvas {
+            display: block;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+            font-family: 'Qui Finn', sans-serif;
+            letter-spacing: 2px;
+
+            @media (max-width: 544px) {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+                margin: auto;
+            }
+        }
+
+        body {
+            overflow: hidden;
+        }
+
+        #iris {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            clip-path: circle(0% at center);
+            transition: clip-path 0.7s ease-in-out;
+        }
+    </style>
+</head>
 <body>
 
-<div id="info">The object is interactive. Click object to continue..</div>
+<div id="iris"></div>
+<div id="info">Object is interactive. Double click to continue..</div>
 
 <script type="module">
     import * as THREE from 'https://cdn.skypack.dev/three@0.131.2/build/three.module.js';
@@ -61,82 +76,67 @@
     animate();
 
     function init() {
-        // Load background texture
         const textureLoader = new THREE.TextureLoader();
-        const backgroundTexture = textureLoader.load('Amatic SC.png'); // Replace with the path to your image
+        const backgroundTexture = textureLoader.load('Amatic SC.png');
 
-        // Create scene
         scene = new THREE.Scene();
         scene.background = backgroundTexture;
 
-        // Create ambient light
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
-        // Create directional light
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
         directionalLight.position.set(3, 10, 4);
         scene.add(directionalLight);
 
-        // Load the GLTF model
         const gltfLoader = new GLTFLoader();
         gltfLoader.load(
             'sitting.glb',
             function (gltf) {
-                // Center the object
                 const object = gltf.scene;
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
                 object.position.sub(center);
 
-                // Find the material you want to make transparent by its name
-                const materialNameToMakeTransparent = 'Glass Simple'; // Replace with the actual name of the material
+                const materialNameToMakeTransparent = 'Glass Simple';
 
                 object.traverse((node) => {
                     if (node.isMesh && node.material.name === materialNameToMakeTransparent) {
-                        // Enable transparency for the specific material
                         node.material.transparent = true;
-                        // Set the desired opacity value (0.0 for fully transparent, 1.0 for fully opaque)
-                        node.material.opacity = 0.25; // You can adjust the opacity as needed
+                        node.material.opacity = 0.25;
                     }
                 });
 
-                // Add click event listener to the document
                 document.addEventListener('click', onClick, false);
 
                 scene.add(object);
 
-                // Get the animations from the GLTF file
                 mixer = new THREE.AnimationMixer(object);
                 gltf.animations.forEach((clip) => {
                     const action = mixer.clipAction(clip);
                     action.play();
                 });
             },
-            undefined, // onProgress callback
+            undefined,
             function (error) {
                 console.error('Error loading GLTF model:', error);
             }
         );
 
-        // Create perspective camera
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 0, 18);
 
-        // Create renderer
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Create OrbitControls
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 1.2;
 
-        // Resize handling
         window.addEventListener('resize', onWindowResize);
     }
 
@@ -164,24 +164,31 @@
         renderer.render(scene, camera);
     }
 
-    function onClick(event) {
-        // Calculate mouse position in normalized device coordinates
-        const mouse = new THREE.Vector2();
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    let clickCount = 0;
+let clickTimeout;
 
-        // Raycasting
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
+function onClick(event) {
+    clickCount++;
 
-        // Check for intersections
-        const intersects = raycaster.intersectObjects(scene.children, true);
+    if (clickCount === 1) {
+        // Set a timer to reset the click count if there's no second click within 500 milliseconds
+        clickTimeout = setTimeout(() => {
+            clickCount = 0;
+        }, 500);
+    } else if (clickCount === 2) {
+        // Cancel the timer and proceed with the transition
+        clearTimeout(clickTimeout);
 
-        if (intersects.length > 0) {
-            // Open another HTML file on click
+        document.getElementById('iris').style.clipPath = 'circle(100% at center)';
+        
+        setTimeout(() => {
             window.location.href = 'Wireframe.html';
-        }
+        }, 500);
+
+        // Reset click count after the transition
+        clickCount = 0;
     }
+}
 </script>
 
 </body>
